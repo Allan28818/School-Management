@@ -44,13 +44,12 @@ Adicione a seguinte dependência ao arquivo `pom.xml`:
 </dependency>
 ```
 
-Sem Maven:
+### Sem Maven:
 Baixe o driver PostgreSQL em formato .jar do Maven Central Repository e adicione-o ao classpath do seu projeto.
 
-Configuração do Banco de Dados
-Arquivo docker-compose.yml
-yaml
-Copiar código
+### Configuração do Banco de Dados
+Arquivo `docker-compose.yml`
+```
 version: "3.8"
 
 services:
@@ -65,12 +64,11 @@ services:
       - "5432:5432"
     volumes:
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-Script de Inicialização init.sql
-Crie o arquivo ./postgres/init.sql com o seguinte conteúdo:
+```
+### Script de Inicialização init.sql
+Crie o arquivo `./postgres/init.sql` com o seguinte conteúdo:
 
-sql
-Copiar código
-CREATE TABLE IF NOT EXISTS professors (
+```CREATE TABLE IF NOT EXISTS professors (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     age INT NOT NULL,
@@ -91,28 +89,28 @@ CREATE TABLE IF NOT EXISTS courses (
     course_load INT NOT NULL,
     professor_id INT REFERENCES professors(id)
 );
-Inicializando o Banco de Dados com Docker
+```
+### Inicializando o Banco de Dados com Docker
 Execute os seguintes comandos para configurar o banco de dados:
 
-bash
-Copiar código
+```
 docker-compose up -d
+```
 Verifique se o banco está ativo:
 
-bash
-Copiar código
+```
 docker exec -it postgres_poo psql -U admin -d school_management
+```
 Dentro do cliente PostgreSQL, execute:
 
-sql
-Copiar código
+```
 \dt
-Configuração do Projeto
-Banco de Dados
-No arquivo src/data/DataBase.java:
+```
+## Configuração do Projeto
+### Banco de Dados
+No arquivo `src/data/DataBase.java:`
 
-java
-Copiar código
+```
 package src.data;
 
 import java.sql.Connection;
@@ -132,24 +130,30 @@ public class DataBase {
         }
     }
 }
-Como Rodar o Projeto
-Compile o projeto Java:
+```
+## Como Rodar o Projeto
+1. Compile o projeto Java:
+- Certifique-se de que todas as dependências estão configuradas corretamente.
 
-Certifique-se de que todas as dependências estão configuradas corretamente.
-Execute a classe principal Main:
+2. Execute a classe principal `Main`:
+- Localização: src/Main.java.
+- Esta classe inicializa a interface gráfica.
 
-Localização: src/Main.java.
-Esta classe inicializa a interface gráfica.
-Interaja com o sistema de gestão escolar por meio das interfaces fornecidas.
+3. Interaja com o sistema de gestão escolar por meio das interfaces fornecidas.
 
-Estrutura do Projeto
+---
+
+## Estrutura do Projeto
 O projeto está dividido em três principais camadas:
 
-Models: Representa as entidades principais (Student, Professor, Course).
-Views: Interfaces gráficas criadas com Swing.
-Controllers: Lógica para integrar as views com o banco de dados.
-Melhorias Futuras
-Implementar autenticação para diferentes usuários com permissões específicas.
-Adicionar relatórios exportáveis em PDF.
-Melhorar o design das interfaces gráficas.
-Implementar testes unitários para as classes do controller.
+- Models: Representa as entidades principais (Student, Professor, Course).
+- Views: Interfaces gráficas criadas com Swing.
+- Controllers: Lógica para integrar as views com o banco de dados.
+
+---
+
+## Melhorias Futuras
+- Implementar autenticação para diferentes usuários com permissões específicas.
+- Adicionar relatórios exportáveis em PDF.
+- Melhorar o design das interfaces gráficas.
+- Implementar testes unitários para as classes do controller.
