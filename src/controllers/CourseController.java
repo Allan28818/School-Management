@@ -1,81 +1,149 @@
 package src.controllers;
 
-import src.data.DataBase;
 import src.models.Course;
 import src.models.Professor;
 
-import java.sql.*;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CourseController {
 
-    public void addCourse(Course course) {
-        String sql = "INSERT INTO courses (name, course_load, professor_id) VALUES (?, ?, ?)";
-
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, course.getName());
-            pstmt.setInt(2, course.getCourseLoad());
-            pstmt.setInt(3, course.getProfessor().getId());
-            pstmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
+    private final String filePath = "../courses.txt";
 
     public List<Course> getAllCourses() {
         List<Course> courses = new ArrayList<>();
-        String sql = "SELECT c.id, c.name, c.course_load, p.id as professor_id, p.name as professor_name " +
-                     "FROM courses c JOIN professors p ON c.professor_id = p.id";
 
-        try (Connection conn = DataBase.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] data = line.split(",");
+                
+                List<String> subscribedStudents = new ArrayList<>();
+                if (data.length > 4 && !data[4].isEmpty()) {
+                    String[] students = data[4].split(";");
+                    for (String studentId : students) {
+                        subscribedStudents.add(studentId);
+                    }
+                }
+                
+                Professor professor = new ProfessorController().getProfessorById(Integer.parseInt(data[3]));
+                
+                Course course = new Course(
+                    Integer.parseInt(data[0]), 
+                    data[1],                  
+                    Integer.parseInt(data[2]),
+                    professor                 
+                );
+                
+                course.getSubscribedStudentsIds().addAll(subscribedStudents);
 
-            while (rs.next()) {
-                Professor professor = new Professor(rs.getInt("id"), rs.getString("name"), rs.getInt("age"), rs.getString("specialty"), rs.getString("registration"));
-                Course course = new Course(rs.getInt("id"), rs.getString("name"), rs.getInt("course_load"), professor);
                 courses.add(course);
             }
-
-        } catch (SQLException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
         return courses;
     }
 
-    public void updateCourse(Course course) {
-        String sql = "UPDATE courses SET name = ?, course_load = ?, professor_id = ? WHERE id = ?";
-
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, course.getName());
-            pstmt.setInt(2, course.getCourseLoad());
-            pstmt.setInt(3, course.getProfessor().getId());
-            pstmt.setInt(4, course.getId());
-            pstmt.executeUpdate();
-
-        } catch (SQLException e) {
+    public boolean addCourse(Course course) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, true))) {            
+            StringBuilder studentIds = new StringBuilder();
+            for (String studentId : course.getSubscribedStudentsIds()) {
+                if (studentIds.length() > 0) {
+                    studentIds.append(";");
+                }
+                studentIds.append(studentId);
+            }
+            
+            writer.write(course.getId() + "," +
+                    course.getName() + "," +
+                    course.getCourseLoad() + "," +
+                    course.getProfessor().getId() + "," +
+                    studentIds.toString());
+            writer.newLine();
+            return true;
+        } catch (IOException e) {
             e.printStackTrace();
         }
+        return false;
     }
 
-    public void deleteCourse(int courseId) {
-        String sql = "DELETE FROM courses WHERE id = ?";
+    public boolean deleteCourse(int id) {
+        List<Course> courses = getAllCourses();
+        boolean deleted = false;
 
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, courseId);
-            pstmt.executeUpdate();
-
-        } catch (SQLException e) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (Course course : courses) {
+                if (course.getId() != id) {                    
+                    StringBuilder studentIds = new StringBuilder();
+                    for (String studentId : course.getSubscribedStudentsIds()) {
+                        if (studentIds.length() > 0) {
+                            studentIds.append(";");
+                        }
+                        studentIds.append(studentId);
+                    }
+                    
+                    writer.write(course.getId() + "," +
+                            course.getName() + "," +
+                            course.getCourseLoad() + "," +
+                            course.getProfessor().getId() + "," +
+                            studentIds.toString());
+                    writer.newLine();
+                } else {
+                    deleted = true;
+                }
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
+
+        return deleted;
+    }
+
+    public boolean updateCourse(Course updatedCourse) {
+        List<Course> courses = getAllCourses();
+        boolean updated = false;
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (Course course : courses) {
+                if (course.getId() == updatedCourse.getId()) {                    
+                    StringBuilder studentIds = new StringBuilder();
+                    for (String studentId : updatedCourse.getSubscribedStudentsIds()) {
+                        if (studentIds.length() > 0) {
+                            studentIds.append(";");
+                        }
+                        studentIds.append(studentId);
+                    }
+
+                    writer.write(updatedCourse.getId() + "," +
+                            updatedCourse.getName() + "," +
+                            updatedCourse.getCourseLoad() + "," +
+                            updatedCourse.getProfessor().getId() + "," +
+                            studentIds.toString());
+                    updated = true;
+                } else {                    
+                    StringBuilder studentIds = new StringBuilder();
+                    for (String studentId : course.getSubscribedStudentsIds()) {
+                        if (studentIds.length() > 0) {
+                            studentIds.append(";");
+                        }
+                        studentIds.append(studentId);
+                    }
+
+                    writer.write(course.getId() + "," +
+                            course.getName() + "," +
+                            course.getCourseLoad() + "," +
+                            course.getProfessor().getId() + "," +
+                            studentIds.toString());
+                }
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return updated;
     }
 }

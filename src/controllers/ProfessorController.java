@@ -1,118 +1,110 @@
 package src.controllers;
 
-import src.data.DataBase;
 import src.models.Professor;
 
-import java.sql.*;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ProfessorController {
 
+    private final String filePath = "../professors.txt";
+
     public List<Professor> getAllProfessors() {
         List<Professor> professors = new ArrayList<>();
-        String sql = "SELECT id, name, age, specialty, registration FROM professors";
 
-        try (Connection conn = DataBase.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] data = line.split(",");
                 Professor professor = new Professor(
-                        rs.getInt("id"),
-                        rs.getString("name"),
-                        rs.getInt("age"),
-                        rs.getString("specialty"),
-                        rs.getString("registration")
+                        Integer.parseInt(data[0]), // id
+                        data[1],                  // name
+                        Integer.parseInt(data[2]),// age
+                        data[3],                  // specialty
+                        data[4]                   // registration
                 );
                 professors.add(professor);
             }
-
-        } catch (SQLException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
         return professors;
     }
 
-    public Professor getProfessorById(String id) {
-        String sql = "SELECT id, name, age, specialty, registration FROM professors WHERE id = ?";
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, id);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return new Professor(
-                            rs.getInt("id"),
-                            rs.getString("name"),
-                            rs.getInt("age"),
-                            rs.getString("specialty"),
-                            rs.getString("registration")
-                    );
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return null;
+    public Professor getProfessorById(int id) {
+        return getAllProfessors().stream()
+                .filter(professor -> professor.getId() == id)
+                .findFirst()
+                .orElse(null);
     }
 
     public boolean addProfessor(Professor professor) {
-        String sql = "SELECT InsertTeacher(?, ?, '?); ";
-
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, professor.getName());
-            pstmt.setInt(2, professor.getAge());
-            pstmt.setString(3, professor.getSpecialty());
-
-            return pstmt.executeUpdate() > 0;
-
-        } catch (SQLException e) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, true))) {
+            writer.write(professor.getId() + "," +
+                    professor.getName() + "," +
+                    professor.getAge() + "," +
+                    professor.getSpecialty() + "," +
+                    professor.getRegistration());
+            writer.newLine();
+            return true;
+        } catch (IOException e) {
             e.printStackTrace();
         }
-
         return false;
     }
 
     public boolean updateProfessor(Professor professor) {
-        String sql = "UPDATE professors SET name = ?, age = ?, specialty = ?, registration = ? WHERE id = ?";
+        List<Professor> professors = getAllProfessors();
+        boolean updated = false;
 
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, professor.getName());
-            pstmt.setInt(2, professor.getAge());
-            pstmt.setString(3, professor.getSpecialty());
-            pstmt.setString(4, professor.getRegistration());
-            pstmt.setInt(5, professor.getId());
-
-            return pstmt.executeUpdate() > 0;
-
-        } catch (SQLException e) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (Professor p : professors) {
+                if (p.getId() == professor.getId()) {
+                    writer.write(professor.getId() + "," +
+                            professor.getName() + "," +
+                            professor.getAge() + "," +
+                            professor.getSpecialty() + "," +
+                            professor.getRegistration());
+                    updated = true;
+                } else {
+                    writer.write(p.getId() + "," +
+                            p.getName() + "," +
+                            p.getAge() + "," +
+                            p.getSpecialty() + "," +
+                            p.getRegistration());
+                }
+                writer.newLine();
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
-        return false;
+        return updated;
     }
 
     public boolean deleteProfessor(int id) {
-        String sql = "DELETE FROM professors WHERE id = ?";
+        List<Professor> professors = getAllProfessors();
+        boolean deleted = false;
 
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, id);
-            return pstmt.executeUpdate() > 0;
-
-        } catch (SQLException e) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (Professor professor : professors) {
+                if (professor.getId() != id) {
+                    writer.write(professor.getId() + "," +
+                            professor.getName() + "," +
+                            professor.getAge() + "," +
+                            professor.getSpecialty() + "," +
+                            professor.getRegistration());
+                    writer.newLine();
+                } else {
+                    deleted = true;
+                }
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
-        return false;
+        return deleted;
     }
 }

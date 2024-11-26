@@ -1,102 +1,105 @@
 package src.controllers;
 
 import src.models.Student;
-import src.data.DataBase;
 
-import java.sql.*;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class StudentController {
 
+    private final String filePath = "../students.txt";
+
     public List<Student> getAllStudents() {
         List<Student> students = new ArrayList<>();
-        String query = "SELECT id, name, age, registration FROM students";
 
-        try (Connection connection = DataBase.getConnection();
-             PreparedStatement statement = connection.prepareStatement(query);
-             ResultSet resultSet = statement.executeQuery()) {
-
-            while (resultSet.next()) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] data = line.split(",");
                 Student student = new Student(
-                        resultSet.getInt("id"),
-                        resultSet.getString("name"),
-                        resultSet.getInt("age"),
-                        resultSet.getString("registration")
+                        Integer.parseInt(data[0]), 
+                        data[1],                  
+                        Integer.parseInt(data[2]),
+                        data[3]                   
                 );
                 students.add(student);
             }
-        } catch (SQLException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
+
         return students;
     }
 
     public Student getStudentById(int id) {
-        String query = "SELECT id, name, age, registration FROM students WHERE id = ?";
-        try (Connection connection = DataBase.getConnection();
-             PreparedStatement statement = connection.prepareStatement(query)) {
-
-            statement.setInt(1, id);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    return new Student(
-                            resultSet.getInt("id"),
-                            resultSet.getString("name"),
-                            resultSet.getInt("age"),
-                            resultSet.getString("registration")
-                    );
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
+        return getAllStudents().stream()
+                .filter(student -> student.getId() == id)
+                .findFirst()
+                .orElse(null);
     }
 
     public boolean addStudent(Student student) {
-        String query = "INSERT INTO students (name, age, registration) VALUES (?, ?, ?)";
-        try (Connection connection = DataBase.getConnection();
-             PreparedStatement statement = connection.prepareStatement(query)) {
-
-            statement.setString(1, student.getName());
-            statement.setInt(2, student.getAge());
-            statement.setString(3, student.getRegistration());
-
-            return statement.executeUpdate() > 0;
-        } catch (SQLException e) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, true))) {
+            writer.write(student.getId() + "," +
+                    student.getName() + "," +
+                    student.getAge() + "," +
+                    student.getRegistration());
+            writer.newLine();
+            return true;
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return false;
     }
 
     public boolean updateStudent(Student student) {
-        String query = "UPDATE students SET name = ?, age = ?, registration = ? WHERE id = ?";
-        try (Connection connection = DataBase.getConnection();
-             PreparedStatement statement = connection.prepareStatement(query)) {
+        List<Student> students = getAllStudents();
+        boolean updated = false;
 
-            statement.setString(1, student.getName());
-            statement.setInt(2, student.getAge());
-            statement.setString(3, student.getRegistration());
-            statement.setInt(4, student.getId());
-
-            return statement.executeUpdate() > 0;
-        } catch (SQLException e) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (Student s : students) {
+                if (s.getId() == student.getId()) {
+                    writer.write(student.getId() + "," +
+                            student.getName() + "," +
+                            student.getAge() + "," +
+                            student.getRegistration());
+                    updated = true;
+                } else {
+                    writer.write(s.getId() + "," +
+                            s.getName() + "," +
+                            s.getAge() + "," +
+                            s.getRegistration());
+                }
+                writer.newLine();
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
-        return false;
+
+        return updated;
     }
 
     public boolean deleteStudent(int id) {
-        String query = "DELETE FROM students WHERE id = ?";
-        try (Connection connection = DataBase.getConnection();
-             PreparedStatement statement = connection.prepareStatement(query)) {
+        List<Student> students = getAllStudents();
+        boolean deleted = false;
 
-            statement.setInt(1, id);
-            return statement.executeUpdate() > 0;
-        } catch (SQLException e) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (Student student : students) {
+                if (student.getId() != id) {
+                    writer.write(student.getId() + "," +
+                            student.getName() + "," +
+                            student.getAge() + "," +
+                            student.getRegistration());
+                    writer.newLine();
+                } else {
+                    deleted = true;
+                }
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
-        return false;
+
+        return deleted;
     }
 }
